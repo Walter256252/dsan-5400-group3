@@ -2,14 +2,39 @@
 name = "dsan_5400_group3"
 version = "0.1.0"
 description = "final project"
-authors = ["dsan-5400-group3"]
+authors = [
+    "Laurent Julia Calac <email@example.com>",
+    "Jiayuan Gong <email@example.com>",
+    "Walter Hall wbh39@georgetown.edu",
+    "Jing Tan <email@example.com>",
+    "Hung Tran <email@example.com>"
+]
 license = "MIT"
 readme = "README.md"
 
+
 [tool.poetry.dependencies]
 python = "^3.9"
+pandas = "^2.2.0"
+numpy = "^1.26.0"
+spacy = "^3.7.0"
+transformers = "^4.39.0"
+beautifulsoup4 = "^4.12.0"
+requests = "^2.31.0"
+wikipedia-api = "^0.6.0"
+vaderSentiment = "^3.3.2"
+scikit-learn = "^1.4.0"
+matplotlib = "^3.8.0"
+seaborn = "^0.12.0"
+bertopic = "^0.16.0"
+gensim = "^4.3.0"
+
 
 [tool.poetry.dev-dependencies]
+pytest = "^8.0.0"
+black = "^24.0.0"
+flake8 = "^7.0.0"
+isort = "^5.13.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
