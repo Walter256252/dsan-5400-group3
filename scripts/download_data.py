@@ -25,7 +25,7 @@ session = requests.Session()
 session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
 session.headers.update({
     "Authorization": f"Bearer {API_TOKEN}",
-    "User-Agent": "DSAN5400 (University project, contact if issues)"
+    "User-Agent": "DSAN5400"
 })
 
 

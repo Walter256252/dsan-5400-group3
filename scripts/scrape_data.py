@@ -1,93 +1,182 @@
-import requests
 import time
 import json
+import math
+import argparse
+from multiprocessing import Process
 from urllib.parse import urlparse, parse_qs
-from pathlib import Path
+from bs4 import BeautifulSoup
+from tqdm import tqdm
+import requests
+from requests.adapters import HTTPAdapter, Retry
 
+
+# Global API configuration
 API_ENDPOINT = "https://en.wikipedia.org/w/api.php"
+MAX_REQUESTS_PER_HOUR = 5000   # total across ALL processes
 
-# Insert your API token here
-API_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIyNTAyMTFiNzQ5Y2U2MzM4OGY0YjE3MDgwMWNhMjAzYiIsImp0aSI6Ijc5NzIxNGMwZGQ5OGEzZWUxOTBjYWVlNjFhNzdiYWExNTg0MmUyY2MwMDFlMmNkYjY0MWZkZWFlM2FjYmUxM2M5OWIzMzc0MTY0MjFmMmE5IiwiaWF0IjoxNzY0MDE2NDA0Ljc2NzEwNCwibmJmIjoxNzY0MDE2NDA0Ljc2NzEwNiwiZXhwIjozMzMyMDkyNTIwNC43NjQ3MTMsInN1YiI6IjgwNzU1ODczIiwiaXNzIjoiaHR0cHM6Ly9tZXRhLndpa2ltZWRpYS5vcmciLCJyYXRlbGltaXQiOnsicmVxdWVzdHNfcGVyX3VuaXQiOjUwMDAsInVuaXQiOiJIT1VSIn0sInNjb3BlcyI6WyJiYXNpYyJdfQ.ucp5uOkdKU0Y9xlkpSsCPSWSow_RviXxWuI1hxL9bYe9p3GD4gQmqVm8PbktQ1x7FDOC9mg29IlWUbXpEMKr2HjQvEa4W4egPc1g2EYZMU_v_RwrkqnL1kIfmqUYytGvQ0C05YV70Z-aW_ZvV79sGPtPH3wM9j8to5ql9fZr4GjK-Z6o0o02xsukhJKFHv7_vIHe4jCy2Zcihb4JKSPGGP2INplBdLyglpdvCFzp0KGsIDudXPox5eLyJvx-_ave6ArGgQaLQ0nGPZfJNPT5ntMtopkXvom7VjZsSdeQo_MYJGOxB6vtYdS8gUKA3l_5bAzbz4KlbrPNBXse3U55BgXI_XZ4Ox3h52d4mZ5Rv5lfnnQE07a6dCkp4825Hy3PNo_S5Gc1cy9lXm_5S5Jk23GhANJ23n1gUFHSHaDy1ST2yzGr5YwyEwwoiw7LQwENFz8gOHdqDJaGkusJ8KoCzbhr-EhNkpDQlb-ZVk13Jv4WZdM6KdWGF80o1RO_Vv5ZaudeDi5ybzt68WfeWYuaOHMS4XhDDaivwOcowE6XtTUWgbxMHe0xUky3ukUFwbyl3FCX0w1d7q1uJA-Fxm7zAlnV6Lx19dxuro26w4PgRoZcH-3-_3FtiQYobW7Ob9FJZZwgRsPI_dUM4_3VM_3I4XZzbYHTYtgt8xhUr8iXb5A"
-
-# Wikipedia API limit for authenticated users = 5000 req/hr
-REQUESTS_PER_HOUR = 5000
-SECONDS_PER_REQUEST = 3600 / REQUESTS_PER_HOUR  # ≈ 0.72 seconds per request
-BATCH_SIZE = 50  # Max allowed by MediaWiki
-
-OUTPUT_FILE = "wikipedia_pages.jsonl"
+# Create retry strategy once
+retry_strategy = Retry(
+    total=5,
+    backoff_factor=1.5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET"]
+)
 
 
-def extract_pageid_from_url(url: str) -> str:
-    """Extract curid=#### from Wikipedia URL."""
+def extract_pageid_from_url(url: str):
+    """Extract pageid from ?curid=NNNN Wikipedia URLs."""
     parsed = urlparse(url)
     qs = parse_qs(parsed.query)
     if "curid" in qs:
-        return qs["curid"][0]
-    else:
-        return None
+        return qs["curid"][0].strip()
+    return None
 
 
-def fetch_batch(page_ids):
-    """Fetch up to 50 pages using pageids batching."""
+def fetch_page_text_parse(session, pageid: str):
+    """Use action=parse to fetch HTML → convert to plaintext."""
     params = {
-        "action": "query",
-        "pageids": "|".join(page_ids),
-        "prop": "extracts",
-        "explaintext": 1,       # get plain text version
-        "format": "json"
+        "action": "parse",
+        "pageid": pageid,
+        "prop": "text",
+        "format": "json",
+        "formatversion": "2"
     }
 
-    headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
-        "User-Agent": "MyResearchScraper/1.0"
+    resp = session.get(API_ENDPOINT, params=params, timeout=20)
+    resp.raise_for_status()
+    data = resp.json()
+
+    if "error" in data:
+        return {
+            "pageid": pageid,
+            "title": None,
+            "missing": True,
+            "text": None,
+            "error": data["error"].get("info")
+        }
+
+    html = data["parse"]["text"]
+    title = data["parse"]["title"]
+
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(separator="\n").strip()
+
+    return {
+        "pageid": pageid,
+        "title": title,
+        "missing": False,
+        "text": text
     }
 
-    response = requests.get(API_ENDPOINT, params=params, headers=headers)
-    response.raise_for_status()  # crash early on API errors
-    return response.json()
 
+def worker_process(worker_id, pageid_list, output_path, api_token, total_workers):
+    """
+    Runs inside each worker:
+    - rate limit = MAX_REQUESTS_PER_HOUR / total_workers
+    - stagger workers slightly to avoid sync bursts
+    """
+    # Each worker has its own HTTP session
+    session = requests.Session()
+    session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+    session.headers.update({
+        "Authorization": f"Bearer {api_token}",
+        "User-Agent": f"DSAN5400-worker-{worker_id}"
+    })
 
-def scrape_all(url_list):
-    Path(OUTPUT_FILE).unlink(missing_ok=True)
+    # Worker-specific request budget
+    worker_limit = MAX_REQUESTS_PER_HOUR / total_workers
+    SLEEP_PER_REQUEST = 3600.0 / MAX_REQUESTS_PER_HOUR  # global ~0.72 sec
 
-    all_page_ids = [extract_pageid_from_url(url) for url in url_list]
-    all_page_ids = [pid for pid in all_page_ids if pid is not None]
+    # Stagger workers: worker 0 starts immediately, worker 1 waits 0.1 sec, etc.
+    time.sleep(worker_id * 0.1)
 
-    print(f"Total valid page IDs: {len(all_page_ids)}")
+    print(f"[Worker {worker_id}] Starting with {len(pageid_list)} pages…")
+    print(f"[Worker {worker_id}] Requests/hour limit: {worker_limit:.1f}")
 
-    with open(OUTPUT_FILE, "a", encoding="utf8") as f:
+    requests_made = 0
+    hour_start = time.time()
 
-        for i in range(0, len(all_page_ids), BATCH_SIZE):
-            batch = all_page_ids[i : i + BATCH_SIZE]
-            print(f"Fetching batch {i // BATCH_SIZE + 1} / {len(all_page_ids) // BATCH_SIZE + 1} ...")
+    with open(output_path, "w", encoding="utf-8") as f_out:
+        for pid in tqdm(pageid_list, desc=f"Worker {worker_id}", position=worker_id):
+
+            # Per-worker rate limit
+            if requests_made >= worker_limit:
+                elapsed = time.time() - hour_start
+                wait_time = max(0, 3600 - elapsed)
+                print(f"\n[Worker {worker_id}] Hourly limit reached — sleeping {wait_time:.1f}s")
+                time.sleep(wait_time)
+                hour_start = time.time()
+                requests_made = 0
 
             try:
-                data = fetch_batch(batch)
+                result = fetch_page_text_parse(session, pid)
             except Exception as e:
-                print(f"Error fetching batch: {e}")
-                time.sleep(2)
-                continue
-
-            pages = data.get("query", {}).get("pages", {})
-
-            for pid, page in pages.items():
-                out = {
+                result = {
                     "pageid": pid,
-                    "title": page.get("title", ""),
-                    "missing": "missing" in page,
-                    "text": page.get("extract", "")  # FINAL FIX: correct key for plaintext
+                    "title": None,
+                    "missing": True,
+                    "text": None,
+                    "error": str(e)
                 }
-                f.write(json.dumps(out) + "\n")
 
-            # Respect rate limit (≈1 request/0.72s)
-            time.sleep(SECONDS_PER_REQUEST)
+            f_out.write(json.dumps(result, ensure_ascii=False) + "\n")
+            requests_made += 1
 
-    print("Done scraping.")
+            time.sleep(SLEEP_PER_REQUEST)  # small throttle
+
+    print(f"[Worker {worker_id}] DONE.")
+
+
+def split_into_chunks(lst, n):
+    """Split list into n chunks for worker assignment."""
+    k, m = divmod(len(lst), n)
+    return [lst[i*k + min(i, m):(i+1)*k + min(i+1, m)] for i in range(n)]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--workers", type=int, default=5)
+    parser.add_argument("--token", required=True)
+    parser.add_argument("--outdir", default="./output/")
+    args = parser.parse_args()
+
+    # Load URLs
+    with open(args.input, "r") as f:
+        urls = [line.strip() for line in f if line.strip()]
+
+    # Extract pageids
+    pageids = [extract_pageid_from_url(u) for u in urls]
+    pageids = [p for p in pageids if p is not None]
+
+    print(f"Loaded {len(pageids)} valid page IDs.")
+    print(f"Using {args.workers} worker processes.")
+
+    # Split into N chunks
+    chunks = split_into_chunks(pageids, args.workers)
+
+    procs = []
+    for i, chunk in enumerate(chunks):
+        out_path = f"{args.outdir}/part_{i}.jsonl"
+        p = Process(
+            target=worker_process,
+            args=(i, chunk, out_path, args.token, args.workers)
+        )
+        p.start()
+        procs.append(p)
+
+    for p in procs:
+        p.join()
+
+    print("\nAll workers finished. Combine output files if needed.")
 
 
 if __name__ == "__main__":
+    main()
 
-    with open("../biography_urls.txt") as f:
-        urls = [line.strip() for line in f if line.strip()]
-
-    scrape_all(urls)
+# Usage
+# python scrape_parallel.py \
+#     --input ../biography_urls.txt \
+#     --workers 5 \
+#     --token YOUR_API_TOKEN \
+#     --outdir output
