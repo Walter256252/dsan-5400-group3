@@ -1,6 +1,24 @@
+"""
+Summary of this script
+
+* Reads a list of Wikipedia URLs containing ?curid=###.
+* Extracts the numeric pageid.
+* Splits the list into N workers (multiprocessing).
+* Each worker:
+    * Scrapes the article HTML page.
+    * Extracts the article title and body text with BeautifulSoup.
+    * Saves each result as one JSONL line.
+    * Enforces a rate limit so system don't overload Wikipedia.
+* Writes results into separate output JSONL files
+
+python scrape_data.py \
+    --input ../biography_urls.txt \
+    --workers 5 \
+    --outdir ../output
+"""
+
 import time
 import json
-import math
 import argparse
 from multiprocessing import Process
 from urllib.parse import urlparse, parse_qs
@@ -9,12 +27,11 @@ from tqdm import tqdm
 import requests
 from requests.adapters import HTTPAdapter, Retry
 
+# Total allowed request rate across all workers
+MAX_REQUESTS_PER_HOUR = 100000
+SECONDS_PER_REQUEST = 3600 / MAX_REQUESTS_PER_HOUR  
 
-# Global API configuration
-API_ENDPOINT = "https://en.wikipedia.org/w/api.php"
-MAX_REQUESTS_PER_HOUR = 5000   # total across ALL processes
-
-# Create retry strategy once
+# Retry strategy for requests
 retry_strategy = Retry(
     total=5,
     backoff_factor=1.5,
@@ -24,7 +41,7 @@ retry_strategy = Retry(
 
 
 def extract_pageid_from_url(url: str):
-    """Extract pageid from ?curid=NNNN Wikipedia URLs."""
+    """Extract pageid from ?curid=XXXX format."""
     parsed = urlparse(url)
     qs = parse_qs(parsed.query)
     if "curid" in qs:
@@ -32,151 +49,142 @@ def extract_pageid_from_url(url: str):
     return None
 
 
-def fetch_page_text_parse(session, pageid: str):
-    """Use action=parse to fetch HTML → convert to plaintext."""
-    params = {
-        "action": "parse",
-        "pageid": pageid,
-        "prop": "text",
-        "format": "json",
-        "formatversion": "2"
-    }
+def fetch_html_page(session, pageid: str):
+    """Scrape the wiki HTML page and extract text."""
+    # Construct URL
+    url = f"https://en.wikipedia.org/wiki/index.php?curid={pageid}"
 
-    resp = session.get(API_ENDPOINT, params=params, timeout=20)
-    resp.raise_for_status()
-    data = resp.json()
-
-    if "error" in data:
+    try:
+        # Fetch page
+        response = session.get(url, timeout=20)
+        response.raise_for_status()
+    except Exception as e:
+        # Return empty JSON object
         return {
             "pageid": pageid,
             "title": None,
             "missing": True,
             "text": None,
-            "error": data["error"].get("info")
+            "error": str(e)
         }
 
-    html = data["parse"]["text"]
-    title = data["parse"]["title"]
+    # Parse HTML
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text(separator="\n").strip()
+    # Extract title
+    title_tag = soup.find("h1", id="firstHeading")
+    title = title_tag.get_text(strip=True) if title_tag else None
 
+    # Extract main article content
+    content = soup.find("div", id="mw-content-text")
+    if content:
+        text = content.get_text(separator="\n").strip()
+    else:
+        text = ""
+
+    # Build JSON object
     return {
         "pageid": pageid,
         "title": title,
-        "missing": False,
+        "missing": False if text else True,
         "text": text
     }
 
-
-def worker_process(worker_id, pageid_list, output_path, api_token, total_workers):
+# This runs in parallel for each chunk of page IDs
+def worker_process(worker_id, pageids, output_path, total_workers):
     """
-    Runs inside each worker:
-    - rate limit = MAX_REQUESTS_PER_HOUR / total_workers
-    - stagger workers slightly to avoid sync bursts
+    Worker logic:
+    - Rate limit enforced: MAX_REQUESTS_PER_HOUR / total_workers
+    - Slight staggering to avoid synchronized bursts
     """
-    # Each worker has its own HTTP session
     session = requests.Session()
     session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
     session.headers.update({
-        "Authorization": f"Bearer {api_token}",
-        "User-Agent": f"DSAN5400-worker-{worker_id}"
+        "User-Agent": f"DSAN5400-wikiscraper/worker-{worker_id}"
     })
 
-    # Worker-specific request budget
     worker_limit = MAX_REQUESTS_PER_HOUR / total_workers
-    SLEEP_PER_REQUEST = 3600.0 / MAX_REQUESTS_PER_HOUR  # global ~0.72 sec
+    sleep_per_request = SECONDS_PER_REQUEST
 
-    # Stagger workers: worker 0 starts immediately, worker 1 waits 0.1 sec, etc.
+    # Stagger start
     time.sleep(worker_id * 0.1)
 
-    print(f"[Worker {worker_id}] Starting with {len(pageid_list)} pages…")
-    print(f"[Worker {worker_id}] Requests/hour limit: {worker_limit:.1f}")
+    print(f"[Worker {worker_id}] Starting with {len(pageids)} pages...")
+    print(f"[Worker {worker_id}] Hourly limit: {worker_limit:.1f} requests/hr")
 
     requests_made = 0
     hour_start = time.time()
 
     with open(output_path, "w", encoding="utf-8") as f_out:
-        for pid in tqdm(pageid_list, desc=f"Worker {worker_id}", position=worker_id):
+        # Loop over page IDs
+        for pid in tqdm(pageids, desc=f"Worker {worker_id}", position=worker_id):
 
-            # Per-worker rate limit
+            # Enforce hourly limit per worker
             if requests_made >= worker_limit:
                 elapsed = time.time() - hour_start
-                wait_time = max(0, 3600 - elapsed)
-                print(f"\n[Worker {worker_id}] Hourly limit reached — sleeping {wait_time:.1f}s")
-                time.sleep(wait_time)
+                wait = max(0, 3600 - elapsed)
+                print(f"\n[Worker {worker_id}] Limit reached — sleeping {wait:.1f}s")
+                time.sleep(wait)
                 hour_start = time.time()
                 requests_made = 0
 
-            try:
-                result = fetch_page_text_parse(session, pid)
-            except Exception as e:
-                result = {
-                    "pageid": pid,
-                    "title": None,
-                    "missing": True,
-                    "text": None,
-                    "error": str(e)
-                }
-
+            # Scrape page
+            result = fetch_html_page(session, pid)
+            # Save each result to a JSONL line
             f_out.write(json.dumps(result, ensure_ascii=False) + "\n")
-            requests_made += 1
 
-            time.sleep(SLEEP_PER_REQUEST)  # small throttle
+            requests_made += 1
+            time.sleep(sleep_per_request)
 
     print(f"[Worker {worker_id}] DONE.")
 
 
-def split_into_chunks(lst, n):
-    """Split list into n chunks for worker assignment."""
-    k, m = divmod(len(lst), n)
-    return [lst[i*k + min(i, m):(i+1)*k + min(i+1, m)] for i in range(n)]
+def split_into_chunks(list_of_urls, n_workers):
+    """Split list of URLs into n roughly equal chunks."""
+    k, m = divmod(len(list_of_urls), n_workers)
+    return [
+        list_of_urls[i*k + min(i, m):(i+1)*k + min(i+1, m)]
+        for i in range(n_workers)
+    ]
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
     parser.add_argument("--workers", type=int, default=5)
-    parser.add_argument("--token", required=True)
-    parser.add_argument("--outdir", default="./output/")
+    parser.add_argument("--outdir", default="../output/")
     args = parser.parse_args()
 
-    # Load URLs
+    # Load input file and extract clean URLs
     with open(args.input, "r") as f:
         urls = [line.strip() for line in f if line.strip()]
 
-    # Extract pageids
+    # Get page IDs
     pageids = [extract_pageid_from_url(u) for u in urls]
     pageids = [p for p in pageids if p is not None]
 
     print(f"Loaded {len(pageids)} valid page IDs.")
-    print(f"Using {args.workers} worker processes.")
+    print(f"Using {args.workers} workers.")
 
-    # Split into N chunks
+    # Split into worker chunks
     chunks = split_into_chunks(pageids, args.workers)
 
-    procs = []
+    processes = []
     for i, chunk in enumerate(chunks):
         out_path = f"{args.outdir}/part_{i}.jsonl"
-        p = Process(
-            target=worker_process,
-            args=(i, chunk, out_path, args.token, args.workers)
-        )
+        # Create separate Python process
+        p = Process(target=worker_process, args=(i, chunk, out_path, args.workers))
+        # Start worker process
         p.start()
-        procs.append(p)
+        processes.append(p)
 
-    for p in procs:
+    for p in processes:
+        # Waits for each worker to finish
         p.join()
 
-    print("\nAll workers finished. Combine output files if needed.")
+    print("\nAll workers finished.")
 
 
 if __name__ == "__main__":
     main()
 
-# Usage
-# python scrape_parallel.py \
-#     --input ../biography_urls.txt \
-#     --workers 5 \
-#     --token YOUR_API_TOKEN \
-#     --outdir output
