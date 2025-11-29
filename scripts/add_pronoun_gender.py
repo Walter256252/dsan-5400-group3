@@ -90,9 +90,7 @@ def main() -> None:
     if temp_csv.exists():
         temp_csv.unlink()
 
-    # >>> 这里把 chunksize 改小一点，减轻内存压力 <<<
     chunks = pd.read_csv(raw_csv, chunksize=2000)
-    # 你要是觉得够稳了，也可以改成 5000，看机器情况
 
     total_rows = 0
     first_chunk = True
