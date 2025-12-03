@@ -28,7 +28,10 @@ matplotlib = "^3.8.0"
 seaborn = "^0.12.0"
 bertopic = "^0.16.0"
 gensim = "^4.3.0"
-
+textblob = "^0.17.1"
+nltk = "^3.8.0"
+tqdm = "^4.66.0"
+gdown = "^5.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.0.0"
