@@ -8,7 +8,7 @@
 
 This project investigates **gender bias in Wikipedia biographical articles**, a widely studied issue in computational social science and NLP fairness. We examine whether the **sentiment**, **descriptive framing**, and **article structure** differ systematically between men’s and women’s biographies.
 
-Using modern NLP models—including **transformer-based sentiment analysis**—we analyze more than **573,000** cleaned biographies.
+Using modern NLP models—including **transformer-based sentiment analysis**, we analyze more than **573,000** cleaned biographies.
 
 ---
 
@@ -67,12 +67,29 @@ Download any files you'd like directly from the Drive folder.
 ## Option B: Use `--drive-url` to auto-download  
 Example:
 
+
 ```bash
 poetry run python scripts/run_sentiment.py \
   --drive-url "https://drive.google.com/file/d/FILE_ID/view?usp=sharing"
 
 ```
 Replace FILE_ID with the exact file ID for the dataset you want to fetch.
+
+---
+
+# Data Source
+
+Our project sources the previously gathered URLs of Wikipedia biographies from this [project] (https://github.com/DavidGrangier/wikipedia-biography-dataset?tab=readme-ov-file) on neural text generation.
+* insert citation
+
+If you would like to scrape the data yourself using the URLs, please run:
+
+```bash
+python scrape_data.py \
+    --input ../biography_urls.txt \
+    --workers 5 \
+    --outdir ../output
+```
 
 ---
 

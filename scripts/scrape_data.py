@@ -11,6 +11,7 @@ Summary of this script
     * Enforces a rate limit so system don't overload.
 * Writes results into separate output JSONL files
 
+Example usage:
 python scrape_data.py \
     --input ../biography_urls.txt \
     --workers 5 \
