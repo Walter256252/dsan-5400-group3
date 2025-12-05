@@ -79,7 +79,7 @@ Replace FILE_ID with the exact file ID for the dataset you want to fetch.
 
 # Data Source
 
-Our project sources the previously gathered URLs of Wikipedia biographies from this [project](https://github.com/DavidGrangier/wikipedia-biography-dataset?tab=readme-ov-file) on neural text generation.
+Our project sources the previously gathered URLs of Wikipedia biographies from this [project](https://github.com/DavidGrangier/wikipedia-biography-dataset?tab=readme-ov-file) by Rémi Lebret, David Grangier and Michael Auli on neural text generation.
 * insert citation
 
 If you would like to scrape the data yourself using the URLs, please run:
