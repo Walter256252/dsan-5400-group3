@@ -1,14 +1,14 @@
 """
 Summary of this script
 
-* Reads a list of Wikipedia URLs containing ?curid=###.
+* Reads a list of Wikipedia URLs (bibiography_urls.txt) containing ?curid=###.
 * Extracts the numeric pageid.
 * Splits the list into N workers (multiprocessing).
 * Each worker:
     * Scrapes the article HTML page.
     * Extracts the article title and body text with BeautifulSoup.
     * Saves each result as one JSONL line.
-    * Enforces a rate limit so system don't overload Wikipedia.
+    * Enforces a rate limit so system don't overload.
 * Writes results into separate output JSONL files
 
 python scrape_data.py \
