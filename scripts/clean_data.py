@@ -13,8 +13,6 @@ Summary of this script
     * data/processed/train.csv
     * data/processed/val.csv
     * data/processed/test.csv
-- sentence splitting
-- spaCy-based tokenization, lemmatization, and POS tagging
 """
 
 from __future__ import annotations
@@ -25,11 +23,9 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
-import spacy
-from spacy.language import Language
 
 
-# 1. Text cleaning utilities
+# Text cleaning utilities
 # Normalize unicode characters to NFKC form
 def normalize_unicode(text: str) -> str:
     return unicodedata.normalize("NFKC", text)
@@ -145,51 +141,7 @@ def clean_text(text: Any) -> str:
     return text
 
 
-# 2. Sentence splitting utility
-
-# Lazy-load spaCy model to avoid loading it when not needed
-NLP: Language | None = None
-
-
-def get_nlp() -> Language:
-    """Lazy-load the spaCy English model."""
-    global NLP
-    if NLP is None:
-        NLP = spacy.load("en_core_web_sm")
-    return NLP
-
-
-# Split cleaned text into sentences using spaCy's sentence segmentation
-def split_sentences(text: str) -> List[str]:
-    text = text.strip()
-    if not text:
-        return []
-
-    nlp = get_nlp()
-    doc = nlp(text)
-    return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
-
-
-# 3. spaCy-based tokenization, lemmatization, POS tagging
-def spacy_process(text: str) -> Dict[str, List[str]]:
-    if not isinstance(text, str):
-        text = "" if text is None else str(text)
-
-    nlp = get_nlp()
-    doc = nlp(text)
-
-    tokens = [t.text for t in doc]
-    lemmas = [t.lemma_ for t in doc]
-    pos_tags = [t.pos_ for t in doc]
-
-    return {
-        "tokens": tokens,
-        "lemmas": lemmas,
-        "pos": pos_tags,
-    }
-
-
-# 4. Main cleaning + split pipeline  (chunked version)
+# Main cleaning and splitting pipeline 
 def main() -> None:
     # Define paths
     project_root = Path(__file__).resolve().parents[1]
