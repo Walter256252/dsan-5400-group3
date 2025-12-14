@@ -85,7 +85,7 @@ Our project sources the previously gathered URLs of Wikipedia biographies from t
 If you would like to scrape the data yourself using the URLs, please run:
 
 ```bash
-python scrape_data.py \
+python organized_scripts/run_scraping.py \
     --input ../biography_urls.txt \
     --workers 5 \
     --outdir ../output
@@ -99,7 +99,6 @@ python scrape_data.py \
 Scraped Wikipedia biography pages using `?curid=###` links from `biography_urls.txt`.
 
 Tools used:
-- `scrape_data.py`
 - Multiprocessing workers
 - Automatic rate limiting
 - HTML parsing with BeautifulSoup
@@ -107,7 +106,7 @@ Tools used:
 ---
 
 ## **2. Cleaning & Normalization**
-`clean_data.py` performs:
+`cleaner.py` performs:
 - Unicode normalization  
 - Removal of references, templates, HTML tags, categories  
 - Lowercasing and whitespace collapsing  
@@ -119,7 +118,7 @@ Output: data/processed/biographies_clean.csv
 ---
 
 ## **3. Gender Assignment**
-`add_pronoun_gender.py` counts:
+`pronoun_annotator.py` counts:
 - Male pronouns: **he / him / his**
 - Female pronouns: **she / her / hers**
 
@@ -142,18 +141,12 @@ Script:run_sentiment.py
 
 ---
 
-## **5. Exploratory Analysis**
+## **5. Analysis & Statistical Testing**
 `run_analysis.py` computes:
 - Sentiment averages by gender  
 - Pronoun statistics  
 - Article length distributions  
-- Transformer label frequencies  
-
----
-
-## **6. Statistical Testing**
-Using `run_stats.py`, we compute:
-- Student’s t-test  
+- Transformer label frequencies
 - Mann–Whitney U test  
 - Kolmogorov–Smirnov test  
 - Chi-square test for RoBERTa labels  
@@ -195,7 +188,7 @@ After downloading, place the file here: data/processed/biographies_clean.csv
 Run the following command:
 
 ```bash 
-poetry run python scripts/run_sentiment.py \
+poetry run python organized_scripts/run_sentiment.py \
     --drive-url "https://drive.google.com/file/d/1Z7Qm4MGp-lZI8j4k2px2wcHGjhrbpj6z/view?usp=sharing"
 ```
 This will:
@@ -221,7 +214,7 @@ This avoids needing to re-run scraping or cleaning on ~573k articles.
 
 #### Step 1: Run Sentiment on 20k Sample
 ```bash
-poetry run python scripts/run_sentiment.py \
+poetry run python organized_scripts/run_sentiment.py \
   --sample-n 20000 \
   --output-path data/processed/biographies_with_sentiment_sample20k.csv
 ```
@@ -237,7 +230,7 @@ This will output:
 Then run analysis:
 
 ```bash
-poetry run python scripts/run_analysis.py \
+poetry run python organized_scripts/run_analysis.py \
     --input-path data/processed/biographies_with_sentiment_sample20k.csv
 ```
 
@@ -251,7 +244,7 @@ All saved to: results/sentiment/
 Finally, run stats:
 
 ```bash
-poetry run python scripts/run_stats.py \
+poetry run python organized_scripts/run_analysis.py \
     --input-path data/processed/biographies_with_sentiment_sample20k.csv
 ```
 Outputs include:
@@ -271,30 +264,42 @@ Because of dataset size, RoBERTa sentiment analysis may take **many hours** on C
 
 #### Step 1 — Run Full Sentiment Analysis
 ```bash
-poetry run python scripts/run_sentiment.py
+poetry run python organized_scripts/run_sentiment.py
 ```
 Outputs include: data/processed/biographies_with_sentiment.csv
 
 ---
 
-#### Step 2 — Run Full Exploratory Analysis
+#### Step 2 — Run Full Analysis & Statistical Testing
+
 ```bash
-poetry run python scripts/run_analysis.py
+poetry run python organized_scripts/run_analysis.py
 ```
+
+This single command performs all downstream analysis, including:
+
+- Descriptive analysis
+  - Sentiment means and variances by gender
+  - Pronoun usage summaries
+  - Article length statistics
+  - RoBERTa label distributions
+- Statistical hypothesis testing
+  - Two-sample t-tests
+  - Mann–Whitney U tests
+  - Kolmogorov–Smirnov tests
+  - Chi-square tests for RoBERTa sentiment labels
+- Visualization
+  - Sentiment distributions by gender
+  - RoBERTa label distribution plots
+  - Pronoun usage histograms
+
 Outputs include:
 - sentiment_summary_by_gender.csv
 - pronoun_stats_by_gender.csv
 - roberta_distribution_by_gender.csv
-Saved to: results/sentiment/
-
----
-#### Step 3 — Run Full Statistical Tests
-```bash
-poetry run python scripts/run_stats.py
-```
-Outputs include:
 - stats_continuous_male_vs_female.csv
 - stats_chi2_roberta_male_vs_female.csv
+
 Saved to: results/sentiment/
 
 ## Summary of Outputs
@@ -363,11 +368,17 @@ dsan-5400-group3/
 │   ├── run_analysis.py
 │   └── run_stats.py
 │
+├── organized_scripts/
+│   ├── run_scraping.py
+│   ├── run_preprocessing.py
+│   ├── run_sentiment.py
+│   └── run_analysis.py
+│
 └── src/dsan_5400_group3/
-    ├── preprocessing.py
-    ├── sentiment.py
-    ├── evaluation.py
-    └── utils.py
+    ├── scraping/
+    ├── preprocessing/
+    ├── sentiment/
+    └── analysis/
 ```
 
 ---
