@@ -309,6 +309,21 @@ Saved to: results/sentiment/
 | **stats_continuous_male_vs_female.csv** | t-test, MWU, KS comparisons | `results/sentiment/` |
 | **stats_chi2_roberta_male_vs_female.csv** | Chi-square tests for RoBERTa sentiment labels | `results/sentiment/` |
 
+# Testing
+
+We use **pytest** with fixtures and markers to ensure test coverage and rapid execution.
+
+### Prerequisites
+
+All test dependencies are handled automatically via `poetry install`.
+
+### Running the Test Suite
+
+Run the full, fast test suite, excluding the slow transformer execution tests:
+
+```bash
+poetry run pytest -m "not slow"
+
 
 # Repository Structure
 
