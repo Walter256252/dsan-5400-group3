@@ -6,41 +6,24 @@ Entrypoint script for the sentiment analysis pipeline.
 This script is a thin wrapper around:
     dsan_5400_group3.sentiment.sentiment_runner.SentimentRunner
 
-It provides a CLI for running the sentiment workflow:
-    INPUT → VADER → TextBlob → RoBERTa → OUTPUT
-
-Arguments
----------
---input:
-    Path to the cleaned biographies CSV (default: data/processed/biographies_clean.csv)
-
---output:
-    Path where the sentiment-enriched CSV should be written.
-
---sample-n:
-    Use only the first N rows of the dataset (deterministic sampling).
-    Useful for debugging or fast prototype runs.
-
---sample-frac:
-    Use a random fraction of the dataset (e.g., 0.1 for 10%).
-    Cannot be used together with --sample-n.
-
---drive-url:
-    A Google Drive *file link*. If provided, the script downloads the input CSV
-    before running sentiment analysis. Helpful when data is large or shared via Drive.
-
---batch-size:
-    Batch size for RoBERTa inference. Larger = faster but needs more VRAM.
-
---max-length:
-    Maximum tokenized sequence length for RoBERTa. Default = 256 (balanced speed/accuracy).
-
-Only argument parsing happens here. The actual work is done in SentimentRunner.
+Only argument parsing and logging configuration happen here.
+All sentiment logic lives in SentimentRunner.
 """
 
 import argparse
+import logging
 from pathlib import Path
 from dsan_5400_group3.sentiment.sentiment_runner import SentimentRunner
+
+
+def setup_logging():
+    """Configure root logger for CLI execution."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -54,8 +37,21 @@ def parse_args():
     return p.parse_args()
 
 
-if __name__ == "__main__":
+def main():
+    setup_logging()
     args = parse_args()
+
+    logging.info("Launching sentiment analysis pipeline")
+    logging.info(f"Input CSV: {args.input}")
+    logging.info(f"Output CSV: {args.output}")
+
+    if args.sample_n is not None:
+        logging.info(f"Sampling mode: first {args.sample_n} rows")
+    elif args.sample_frac is not None:
+        logging.info(f"Sampling mode: random {args.sample_frac:.1%} of dataset")
+
+    if args.drive_url:
+        logging.info("Input CSV will be downloaded from Google Drive")
 
     runner = SentimentRunner(
         input_csv=Path(args.input),
@@ -68,3 +64,9 @@ if __name__ == "__main__":
     )
 
     runner.run()
+
+    logging.info("Sentiment analysis pipeline completed successfully")
+
+
+if __name__ == "__main__":
+    main()

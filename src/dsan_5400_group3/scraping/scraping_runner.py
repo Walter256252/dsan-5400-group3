@@ -9,6 +9,7 @@ splitting workloads, and coordinating multiprocessing workers.
 import os
 import time
 import json
+import logging
 from multiprocessing import Process
 from tqdm import tqdm
 import requests
@@ -19,6 +20,9 @@ from .fetcher import fetch_html_page
 from .splitter import split_into_chunks
 
 
+logger = logging.getLogger(__name__)
+
+
 class WikiScraper:
     """
     Orchestrates the scraping pipeline:
@@ -27,6 +31,7 @@ class WikiScraper:
     - Split workloads
     - Spawn multiprocessing worker processes
     """
+
     def __init__(
         self,
         workers=5,
@@ -44,11 +49,16 @@ class WikiScraper:
 
     def load_urls(self, path):
         """Reads input URLs & extracts pageids."""
+        logger.info(f"Loading URLs from: {path}")
+
         with open(path, "r") as f:
             urls = [line.strip() for line in f if line.strip()]
 
         pageids = [extract_pageid_from_url(u) for u in urls]
-        return [pid for pid in pageids if pid is not None]
+        pageids = [pid for pid in pageids if pid is not None]
+
+        logger.info(f"Extracted {len(pageids)} valid page IDs")
+        return pageids
 
     def _make_session(self, worker_id):
         session = requests.Session()
@@ -68,8 +78,8 @@ class WikiScraper:
         # stagger to avoid bursts
         time.sleep(worker_id * 0.1)
 
-        print(f"[Worker {worker_id}] Starting {len(pageids)} pages...")
-        print(f"[Worker {worker_id}] Hourly limit: {worker_limit:.1f}")
+        logger.info(f"[Worker {worker_id}] Starting {len(pageids)} pages")
+        logger.info(f"[Worker {worker_id}] Hourly limit: {worker_limit:.1f}")
 
         requests_made = 0
         hour_start = time.time()
@@ -83,7 +93,9 @@ class WikiScraper:
                 if requests_made >= worker_limit:
                     elapsed = time.time() - hour_start
                     wait = max(0, 3600 - elapsed)
-                    print(f"\n[Worker {worker_id}] Limit reached — sleeping {wait:.1f}s")
+                    logger.info(
+                        f"[Worker {worker_id}] Limit reached — sleeping {wait:.1f}s"
+                    )
                     time.sleep(wait)
                     hour_start = time.time()
                     requests_made = 0
@@ -95,14 +107,15 @@ class WikiScraper:
                 requests_made += 1
                 time.sleep(sleep_per_request)
 
-        print(f"[Worker {worker_id}] DONE.")
+        logger.info(f"[Worker {worker_id}] DONE")
 
     def run(self, input_path):
         """Main entry point for the scraper."""
+        logger.info("Starting Wikipedia scraping pipeline")
+
         pageids = self.load_urls(input_path)
 
-        print(f"Loaded {len(pageids)} valid page IDs.")
-        print(f"Using {self.workers} workers.")
+        logger.info(f"Using {self.workers} workers")
 
         chunks = split_into_chunks(pageids, self.workers)
         processes = []
@@ -115,4 +128,4 @@ class WikiScraper:
         for p in processes:
             p.join()
 
-        print("All workers finished.")
+        logger.info("All workers finished.")

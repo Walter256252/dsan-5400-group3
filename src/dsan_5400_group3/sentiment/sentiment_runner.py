@@ -10,17 +10,12 @@ This module calls three independent sentiment components:
 
 It preserves 100% of the original behavior from run_sentiment.py,
 but provides a clean, modular abstraction for DSAN 5400 final project.
-
-Usage (via scripts/run_sentiment.py):
-
-    python scripts/run_sentiment.py \
-        --input data/processed/biographies_clean.csv \
-        --output data/processed/biographies_with_sentiment.csv
 """
 
 from __future__ import annotations
 
 import re
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -30,6 +25,9 @@ import pandas as pd
 from dsan_5400_group3.sentiment.vader import add_vader_sentiment
 from dsan_5400_group3.sentiment.textblob import add_textblob_sentiment
 from dsan_5400_group3.sentiment.roberta import RobertaSentiment
+
+
+logger = logging.getLogger(__name__)
 
 
 class SentimentRunner:
@@ -81,9 +79,9 @@ class SentimentRunner:
         if out_path.exists():
             out_path.unlink()
 
-        print(f"[INFO] Downloading cleaned CSV from Google Drive → {out_path}")
+        logger.info(f"Downloading cleaned CSV from Google Drive → {out_path}")
         gdown.download(direct, str(out_path), quiet=False)
-        print("[INFO] Download complete.")
+        logger.info("Download complete")
 
     # Load + optional sampling
     def load_data(self) -> pd.DataFrame:
@@ -96,23 +94,25 @@ class SentimentRunner:
                 "Run preprocessing pipeline first."
             )
 
-        print(f"[INFO] Loading dataset from {self.input_csv}")
+        logger.info(f"Loading dataset from {self.input_csv}")
         df = pd.read_csv(self.input_csv)
-        print(f"[INFO] Full dataset shape: {df.shape}")
+        logger.info(f"Full dataset shape: {df.shape}")
 
         # Apply sampling if needed
         if self.sample_n:
             df = df.head(self.sample_n)
-            print(f"[INFO] Using first {self.sample_n} rows → {df.shape}")
+            logger.info(f"Using first {self.sample_n} rows → {df.shape}")
 
         elif self.sample_frac:
             df = df.sample(frac=self.sample_frac, random_state=42)
-            print(f"[INFO] Using random {self.sample_frac:.1%} sample → {df.shape}")
+            logger.info(f"Using random {self.sample_frac:.1%} sample → {df.shape}")
 
         return df
 
     # Run the entire sentiment pipeline
     def run(self):
+        logger.info("Starting sentiment analysis pipeline")
+
         df = self.load_data()
 
         # Validate input text column
@@ -126,12 +126,15 @@ class SentimentRunner:
         text_col = self.TEXT_COLUMN
 
         # VADER
+        logger.info("Running VADER sentiment analysis")
         df = add_vader_sentiment(df, text_col)
 
         # TextBlob
+        logger.info("Running TextBlob sentiment analysis")
         df = add_textblob_sentiment(df, text_col)
 
         # RoBERTa
+        logger.info("Running RoBERTa transformer sentiment analysis")
         roberta = RobertaSentiment(
             batch_size=self.batch_size,
             max_length=self.max_length,
@@ -142,5 +145,7 @@ class SentimentRunner:
         self.output_csv.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(self.output_csv, index=False)
 
-        print(f"[INFO] Sentiment-enriched CSV saved to:\n{self.output_csv}")
+        logger.info(f"Sentiment-enriched CSV saved to {self.output_csv}")
+        logger.info("Sentiment analysis pipeline completed successfully")
+
         return df
