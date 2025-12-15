@@ -158,7 +158,19 @@ Results stored in: results/sentiment/
 
 # Reproducibility Instructions
 
-## **1. Install Dependencies**
+## **1. Install Poetry (if your machine doesn't have it)
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Adds Poetry to your PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# Verify installation
+poetry --version
+```
+
+## **2. Install Dependencies**
 ```bash
 poetry install
 ```
@@ -169,15 +181,14 @@ Your working input **must be**:
 - `data/processed/biographies_clean.csv`
 
 
-To obtain it data:
+To obtain it, please read the following:
 
 
 ## Download Cleaned Data from Google Drive
 
 ### Manual Download
 
-- Download directly from Google Drive:
-    - biographies_clean.csv
+- Download `biographies_clean.csv` directly from Google Drive:
     - https://drive.google.com/file/d/1Z7Qm4MGp-lZI8j4k2px2wcHGjhrbpj6z/view?usp=sharing
 
 After downloading, place the file here: data/processed/biographies_clean.csv
@@ -328,9 +339,9 @@ Run the full, fast test suite, excluding the slow transformer execution tests:
 
 ```bash
 poetry run pytest -m "not slow"
+```
 
-
-# Repository Structure
+## Repository Structure
 
 ```
 dsan-5400-group3/
