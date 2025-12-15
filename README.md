@@ -158,7 +158,7 @@ Results stored in: results/sentiment/
 
 # Reproducibility Instructions
 
-## **1. Install Poetry (if your machine doesn't have it)
+## 1. Install Poetry (if your machine doesn't have it)
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
 
@@ -357,12 +357,6 @@ dsan-5400-group3/
 │
 ├── docs/
 │
-├── notebooks/
-│   ├── cleaning.ipynb
-│   ├── sentiment_analysis.ipynb
-│   ├── statistical_testing.ipynb
-│   └── exploratory_analysis.ipynb
-│
 ├── results/
 │   └── sentiment/
 │       ├── sentiment_summary_by_gender.csv
@@ -371,14 +365,6 @@ dsan-5400-group3/
 │       ├── stats_continuous_male_vs_female.csv
 │       └── stats_chi2_roberta_male_vs_female.csv
 │
-├── scripts/
-│   ├── scrape_data.py
-│   ├── clean_data.py
-│   ├── add_pronoun_gender.py
-│   ├── run_sentiment.py
-│   ├── run_analysis.py
-│   └── run_stats.py
-│
 ├── organized_scripts/
 │   ├── run_scraping.py
 │   ├── run_preprocessing.py
@@ -386,10 +372,34 @@ dsan-5400-group3/
 │   └── run_analysis.py
 │
 └── src/dsan_5400_group3/
+    ├──__init__.py
     ├── scraping/
+        ├──__init__.py
+        ├──scraping_runner.py
+        ├──fetcher.py
+        ├──nlp_processor.py
+        ├──utils.py
+        └──splitter.py
     ├── preprocessing/
+        ├──__init__.py
+        ├──preprocessing_runner.py
+        ├──cleaner.py
+        ├──loader.py
+        ├──nlp_processor.py
+        ├──pronoun_annotator.py
+        └──splitter.py
     ├── sentiment/
+        ├──__init__.py
+        ├──sentiment_runner.py
+        ├──roberta.py
+        ├──vader.py
+        └──textblob.py
     └── analysis/
+        ├──__init__.py
+        ├──analysis_runner.py
+        ├──plots.py
+        ├──stats.py
+        └──summaries.py
 ```
 
 ---
