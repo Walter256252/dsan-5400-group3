@@ -7,8 +7,6 @@ Unified analysis pipeline combining:
     - RoBERTa label summaries
     - Statistical tests (t-test, U-test, KS-test, chi-square)
 
-This file DEPRECATING the old run_analysis.py and run_stats.py,
-and merges both into a single coherent analysis stage.
 """
 
 from __future__ import annotations

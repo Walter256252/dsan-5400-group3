@@ -2,9 +2,7 @@
 pronoun_annotator.py
 
 Chunk-based pronoun counting and gender assignment for raw Wikipedia
-biographies. This module preserves the exact logic of the original
-add_pronoun_gender.py script, while reorganizing it into a reusable
-class-based structure for pipeline integration.
+biographies. 
 """
 
 from __future__ import annotations

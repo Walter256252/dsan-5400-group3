@@ -4,8 +4,6 @@ cleaner.py
 Text cleaning utilities for Wikipedia biography processing.
 Contains normalization, removal of references/templates/tables/HTML tags,
 Wikipedia boilerplate removal, and whitespace cleanup.
-
-This file preserves the exact logic from clean_data.py (no modifications).
 """
 
 import re

@@ -2,7 +2,6 @@
 roberta.py
 
 Transformer-based sentiment analysis using the CardiffNLP model.
-Preserves the exact behavior of run_sentiment.py.
 """
 
 import pandas as pd

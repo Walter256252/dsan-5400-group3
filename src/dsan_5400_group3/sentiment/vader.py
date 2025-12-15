@@ -2,7 +2,6 @@
 vader.py
 
 Provides lexicon-based sentiment analysis using VADER.
-Preserves 100% of the original logic in run_sentiment.py.
 """
 
 import pandas as pd

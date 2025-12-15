@@ -3,11 +3,11 @@ name = "dsan_5400_group3"
 version = "0.1.0"
 description = "final project"
 authors = [
-    "Laurent Julia Calac <email@example.com>",
-    "Jiayuan Gong <email@example.com>",
+    "Laurent Julia Calac lj589@georgetown.edu",
+    "Jiayuan Gong jg2493@georgetown.edu",
     "Walter Hall wbh39@georgetown.edu",
-    "Jing Tan <email@example.com>",
-    "Hung Tran <email@example.com>"
+    "Jing Tan jt1573@georgetown.edu",
+    "Hung Tran mt1854@georgetown.edu"
 ]
 license = "MIT"
 readme = "README.md"

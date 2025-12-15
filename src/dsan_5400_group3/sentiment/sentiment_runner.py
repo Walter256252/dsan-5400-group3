@@ -8,8 +8,6 @@ This module calls three independent sentiment components:
     - TextBlob (polarity & subjectivity)
     - RoBERTa (CardiffNLP transformer sentiment)
 
-It preserves 100% of the original behavior from run_sentiment.py,
-but provides a clean, modular abstraction for DSAN 5400 final project.
 """
 
 from __future__ import annotations

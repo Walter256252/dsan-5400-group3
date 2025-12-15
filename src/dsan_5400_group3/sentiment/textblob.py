@@ -2,7 +2,6 @@
 textblob_sentiment.py
 
 Computes TextBlob polarity and subjectivity.
-Logic copied directly from run_sentiment.py.
 """
 
 import re

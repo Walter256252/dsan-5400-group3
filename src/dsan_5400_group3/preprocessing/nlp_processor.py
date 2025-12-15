@@ -7,7 +7,6 @@ spaCy-based NLP utilities:
 - Lemmatization
 - POS tagging
 
-Logic copied 1:1 from clean_data.py.
 """
 
 from typing import Dict, List

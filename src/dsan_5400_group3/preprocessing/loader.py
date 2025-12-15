@@ -2,8 +2,7 @@
 loader.py
 
 Loads multiple .jsonl files from a directory and merges them into a single
-pandas DataFrame or CSV file. This module preserves the exact behavior of the
-original preprocessing.py script, only reorganized into a class-based structure.
+pandas DataFrame or CSV file.
 """
 
 import json

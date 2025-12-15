@@ -1,8 +1,7 @@
 """
 splitter.py
 
-Helper utilities for train/val/test splitting (80/10/10),
-preserving original clean_data.py behavior.
+Helper utilities for train/val/test splitting (80/10/10).
 """
 
 import pandas as pd

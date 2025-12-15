@@ -7,8 +7,6 @@ High-level Preprocessor that orchestrates the full preprocessing pipeline:
 2. Add pronoun-based gender metadata to biographies_raw.csv
 3. Run chunked text cleaning → biographies_clean.csv
 
-This file does NOT change any logic from the underlying modules.
-It only coordinates the sequence of preprocessing steps.
 """
 
 import logging

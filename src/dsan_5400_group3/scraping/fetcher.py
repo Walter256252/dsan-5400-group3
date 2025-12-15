@@ -6,8 +6,6 @@ pages. Given a page ID and a configured requests session, it returns the
 extracted title and article text.
 """
 
-
-
 from bs4 import BeautifulSoup
 
 def fetch_html_page(session, pageid: str):
