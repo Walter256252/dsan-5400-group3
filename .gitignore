@@ -137,19 +137,13 @@ dmypy.json
 
 
 # DATA — DO NOT COMMIT
-
+data/
 
 # All CSV files (your massive Wikipedia data)
 *.csv
 
 # JSON lines dumps from scrape_data.py
 *.jsonl
-
-# Raw data directory
-data/raw/
-
-# Processed data directory
-data/processed/
 
 # Results (sentiment, stats, etc.)
 results/

@@ -1,5 +1,3 @@
-# tests/analysis/test_analysis_runner.py
-
 import pytest
 import pandas as pd
 from pathlib import Path

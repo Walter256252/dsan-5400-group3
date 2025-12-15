@@ -5,7 +5,6 @@ from unittest.mock import patch, MagicMock, Mock
 from dsan_5400_group3.sentiment.sentiment_runner import SentimentRunner
 
 
-
 @pytest.fixture
 def mock_input_data(tmp_path):
     """
@@ -38,12 +37,12 @@ def mock_sentiment_deps(mocker, mock_input_data):
         return_value=df_data.copy()
     )
     
-    # 2. MOCK GITHUB DOWNLOAD: (Fix for attribute error + logic)
+    # 2. MOCK GITHUB DOWNLOAD: 
     mock_gdrive_method = mocker.patch(
         "dsan_5400_group3.sentiment.sentiment_runner.SentimentRunner.download_from_drive"
     )
     
-    # FIX 2: Set the mock download function's side_effect to physically create the expected file 
+    # Set the mock download function's side_effect to physically create the expected file 
     # This prevents FileNotFoundError in tests that rely on the downloaded file existing.
     def mock_download_and_create_file(drive_url, out_path):
         """Simulates gdown.download by ensuring the output path exists."""
@@ -101,9 +100,7 @@ class TestSentimentRunner:
         
         drive_url = "http://mock-drive-link"
         
-        # FIX 3: We MUST define the input path relative to the test runner 
-        # so that the mock download can be verified and the final read can be mocked.
-        # This is the expected path used by the runner (data/downloads/biographies_clean.csv).
+        # This is the expected path used by the runner 
         input_csv_path = Path("data/downloads/biographies_clean.csv")
         output_csv = tmp_path / "out.csv"
         
@@ -114,8 +111,7 @@ class TestSentimentRunner:
             drive_url=drive_url,
         )
         
-        # 2. Run the pipeline (this path should trigger the download_from_drive method)
-        # The side_effect set in the fixture will now ensure input_csv_path exists before pd.read_csv is called
+        # 2. Run the pipeline 
         runner.run()
         
         # 3. Assertions

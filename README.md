@@ -79,16 +79,15 @@ Replace FILE_ID with the exact file ID for the dataset you want to fetch.
 
 # Data Source
 
-Our project sources the previously gathered URLs of Wikipedia biographies from this [project](https://github.com/DavidGrangier/wikipedia-biography-dataset?tab=readme-ov-file) by Rémi Lebret, David Grangier and Michael Auli on neural text generation.
-* insert citation
+Our project sources the previously gathered URLs of Wikipedia biographies from this [project](https://arxiv.org/abs/1603.07771) by Rémi Lebret, David Grangier and Michael Auli on neural text generation.[^1]
 
 If you would like to scrape the data yourself using the URLs, please run:
 
 ```bash
 python organized_scripts/run_scraping.py \
-    --input ../biography_urls.txt \
+    --input biography_urls.txt \
     --workers 5 \
-    --outdir ../output
+    --outdir data/raw/
 ```
 
 ---
@@ -406,8 +405,6 @@ dsan-5400-group3/
 │       ├── val.csv
 │       └── test.csv
 │
-├── docs/
-│
 ├── results/
 │   └── sentiment/
 │       ├── sentiment_summary_by_gender.csv
@@ -424,14 +421,14 @@ dsan-5400-group3/
 │
 └── src/dsan_5400_group3/
     ├──__init__.py
-    ├── scraping/
+    └── scraping/
         ├──__init__.py
         ├──scraping_runner.py
         ├──fetcher.py
         ├──nlp_processor.py
         ├──utils.py
         └──splitter.py
-    ├── preprocessing/
+    └── preprocessing/
         ├──__init__.py
         ├──preprocessing_runner.py
         ├──cleaner.py
@@ -439,7 +436,7 @@ dsan-5400-group3/
         ├──nlp_processor.py
         ├──pronoun_annotator.py
         └──splitter.py
-    ├── sentiment/
+    └── sentiment/
         ├──__init__.py
         ├──sentiment_runner.py
         ├──roberta.py
@@ -451,6 +448,7 @@ dsan-5400-group3/
         ├──plots.py
         ├──stats.py
         └──summaries.py
+└──discussion.md
 ```
 
 ---
@@ -538,6 +536,8 @@ The imbalance is consistent across:
 ---
 
 ## Citation
+
+[^1]: Lebret, Rémi, et al. Neural Text Generation from Structured Data with Application to the Biography Domain. 24 Mar. 2016.
 
 If referencing this work:
 
