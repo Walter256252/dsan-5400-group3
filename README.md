@@ -93,6 +93,46 @@ python organized_scripts/run_scraping.py \
 
 ---
 
+# Pipeline Overview
+
+The following diagram illustrates the full data processing and analysis
+pipeline of our project, from raw Wikipedia URLs to final statistical results.
+
+```mermaid
+flowchart LR
+    A[Wikipedia Biography URLs] --> B[Scraping]
+    B --> C[data/raw/*.jsonl]
+
+    C --> D[Preprocessing]
+    D --> E[biographies_raw.csv]
+    E --> F[Pronoun-based Gender Annotation]
+    F --> G[Chunked Text Cleaning]
+    G --> H[data/processed/biographies_clean.csv]
+
+    H --> I[Sentiment Analysis]
+    I --> J[data/processed/biographies_with_sentiment.csv]
+
+    J --> K[Analysis & Statistical Tests]
+    K --> L[results/sentiment/*.csv]
+```
+
+Raw biography URLs are scraped in parallel and stored as JSONL files.
+A preprocessing stage merges, annotates, and cleans the data in a memory-safe,
+chunked manner. Cleaned biographies are passed through multiple sentiment
+models, and the resulting enriched dataset is used for descriptive analysis
+and statistical hypothesis testing.
+
+## Package Structure Mapping
+
+| Pipeline Stage | Script Entrypoint | Core Module |
+|---------------|------------------|-------------|
+| Scraping | `run_scraping.py` | `scraping/WikiScraper` |
+| Preprocessing | `run_preprocessing.py` | `preprocessing/Preprocessor` |
+| Sentiment | `run_sentiment.py` | `sentiment/SentimentRunner` |
+| Analysis | `run_analysis.py` | `analysis/AnalysisRunner` |
+
+---
+
 # Methods
 
 ## **1. Data Acquisition**
