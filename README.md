@@ -84,7 +84,7 @@ Our project sources the previously gathered URLs of Wikipedia biographies from t
 If you would like to scrape the data yourself using the URLs, please run:
 
 ```bash
-python organized_scripts/run_scraping.py \
+poetry run python organized_scripts/run_scraping.py \
     --input biography_urls.txt \
     --workers 5 \
     --outdir data/raw/
