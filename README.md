@@ -99,21 +99,32 @@ The following diagram illustrates the full data processing and analysis
 pipeline of our project, from raw Wikipedia URLs to final statistical results.
 
 ```mermaid
-flowchart LR
-    A[Wikipedia Biography URLs] --> B[Scraping]
-    B --> C[data/raw/*.jsonl]
+flowchart TD
+    A[Wikipedia Biography URLs]
 
-    C --> D[Preprocessing]
-    D --> E[biographies_raw.csv]
-    E --> F[Pronoun-based Gender Annotation]
-    F --> G[Chunked Text Cleaning]
-    G --> H[data/processed/biographies_clean.csv]
+    subgraph Scraping
+        A --> B[Scraping]
+        B --> C[data/raw/*.jsonl]
+    end
 
-    H --> I[Sentiment Analysis]
-    I --> J[data/processed/biographies_with_sentiment.csv]
+    subgraph Preprocessing
+        C --> D[Merge JSONL]
+        D --> E[biographies_raw.csv]
+        E --> F[Pronoun-based Gender Annotation]
+        F --> G[Chunked Text Cleaning]
+        G --> H[data/processed/biographies_clean.csv]
+    end
 
-    J --> K[Analysis & Statistical Tests]
-    K --> L[results/sentiment/*.csv]
+    subgraph Sentiment
+        H --> I[Sentiment Analysis]
+        I --> J[data/processed/biographies_with_sentiment.csv]
+    end
+
+    subgraph Analysis
+        J --> K[Analysis & Statistical Tests]
+        K --> L[results/sentiment/*.csv]
+    end
+
 ```
 
 Raw biography URLs are scraped in parallel and stored as JSONL files.
